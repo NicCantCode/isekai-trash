@@ -17,23 +17,29 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI debugSpeedText;
     [SerializeField] private TextMeshProUGUI debugZoomText;
     [SerializeField] private float speed = 7.5f;
-    [SerializeField] private InputAction debugSpeedUp = new InputAction();
-    [SerializeField] private InputAction debugSpeedDown = new InputAction();
+    [SerializeField] private InputAction debugSpeedUp;
+    [SerializeField] private InputAction debugSpeedDown;
     
     [Header("Variables")]
-    [SerializeField] private InputAction movementInput = new InputAction();
-    [SerializeField] private InputAction cameraZoomInput = new InputAction();
-    [SerializeField] private LayerMask navigableMask = new LayerMask();
-    [SerializeField] private CinemachineVirtualCamera _virtualFollowCamera;
-    [SerializeField] private Vector2 zoomConstraints = new Vector2();
+    [SerializeField] private InputAction movementInput;
+    [SerializeField] private InputAction cameraZoomInput;
+    [SerializeField] private LayerMask navigableMask;
+    [SerializeField] private CinemachineVirtualCamera virtualFollowCamera;
+    [SerializeField] private Vector2 zoomConstraints;
+    [SerializeField] private float avoidanceFeather = 1.5f;
     
-    private NavMeshAgent _agent = null;
-    private Camera _followCamera = null;
-    private CinemachineFramingTransposer _framingTransposer = null;
+    private NavMeshAgent _agent;
+    private Camera _followCamera;
+    private CinemachineFramingTransposer _framingTransposer;
+    private Animator _playerAnimator;
+    
+    private static readonly int IsRunning = Animator.StringToHash("isRunning");
+    private static readonly int SpeedMultiplier = Animator.StringToHash("speedMultiplier");
 
     private void Start()
     {
-        _framingTransposer = _virtualFollowCamera.GetCinemachineComponent<CinemachineFramingTransposer>();
+        _playerAnimator = GetComponent<Animator>();
+        _framingTransposer = virtualFollowCamera.GetCinemachineComponent<CinemachineFramingTransposer>();
         _followCamera = Camera.main;
         _agent = GetComponent<NavMeshAgent>();
         debugSpeedText.text = "Speed: " + speed;
@@ -44,6 +50,7 @@ public class PlayerController : MonoBehaviour
     {
         HandleMovement();
         HandleZoom();
+        HandleAnimationState();
         
         // Debug
         HandleSpeedDebug();
@@ -68,6 +75,22 @@ public class PlayerController : MonoBehaviour
         // Debug
         debugSpeedUp.Disable();
         debugSpeedDown.Disable();
+    }
+
+    private void HandleAnimationState()
+    {
+        float velocity = _agent.velocity.magnitude;
+        
+        _playerAnimator.SetFloat(SpeedMultiplier, speed / 10);
+
+        if (velocity > 0)
+        {
+            _playerAnimator.SetBool(IsRunning, true);
+        }
+        else
+        {
+            _playerAnimator.SetBool(IsRunning, false);
+        }
     }
 
     private void HandleSpeedDebug()
@@ -107,9 +130,8 @@ public class PlayerController : MonoBehaviour
         if (movementInput.ReadValue<float>() == 1f)
         {
             Ray ray = _followCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            RaycastHit hit;
 
-            if (Physics.Raycast(ray, out hit, 100, navigableMask))
+            if (Physics.Raycast(ray, out var hit, 100, navigableMask))
             {
                 Move(hit.point);
             }
