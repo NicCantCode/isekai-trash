@@ -26,7 +26,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask navigableMask;
     [SerializeField] private CinemachineVirtualCamera virtualFollowCamera;
     [SerializeField] private Vector2 zoomConstraints;
-    [SerializeField] private float avoidanceFeather = 1.5f;
+    [SerializeField] private Vector2 stoppingDistanceHysteresis;
     
     private NavMeshAgent _agent;
     private Camera _followCamera;
@@ -140,6 +140,14 @@ public class PlayerController : MonoBehaviour
 
     private void Move(Vector3 destination)
     {
+        float distanceToDestination = Vector3.Distance(transform.position, destination);
+        
+        if (distanceToDestination <= stoppingDistanceHysteresis.x)
+            _agent.stoppingDistance = stoppingDistanceHysteresis.y;
+        
+        if (distanceToDestination >= stoppingDistanceHysteresis.y)
+            _agent.stoppingDistance = stoppingDistanceHysteresis.x;
+        
         _agent.SetDestination(destination);
     }
 }
